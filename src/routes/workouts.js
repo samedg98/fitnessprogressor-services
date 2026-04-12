@@ -33,7 +33,7 @@ router.post("/log", authenticateToken, async (req, res) => {
 
     res.json({ message: "Workout logged successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("Workout insert error:", err);
     res.status(500).json({ error: "Failed to log workout" });
   }
 });
@@ -48,7 +48,7 @@ router.get("/history", authenticateToken, async (req, res) => {
 
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error("History fetch error:", err);
     res.status(500).json({ error: "Failed to fetch workout history" });
   }
 });
