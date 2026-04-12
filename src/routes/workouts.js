@@ -4,6 +4,12 @@ import { authenticateToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
+
+const {
+  DeleteWorkout
+} = require("../controller/workoutapi.js")
+
+
 // BASIC TEST ROUTE
 router.get("/", (req, res) => {
   res.json({ message: "Workouts route working" });
@@ -52,5 +58,11 @@ router.get("/history", authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch workout history" });
   }
 });
+
+
+router.delete("/workout-delete/:id" , authenticateToken, DeleteWorkout)
+
+
+
 
 export default router;
