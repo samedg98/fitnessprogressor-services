@@ -58,9 +58,19 @@ router.get("/stats", authenticateToken, async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Base structure — future stories will fill these in
+    // WEEKLY TOTALS (last 7 days)
+    const weeklyResult = await pool.query(
+      `SELECT COUNT(*) 
+       FROM workouts 
+       WHERE user_id = $1 
+       AND date >= NOW() - INTERVAL '7 days'`,
+      [userId]
+    );
+
+    const weeklyTotals = parseInt(weeklyResult.rows[0].count);
+
     return res.json({
-      weeklyTotals: null,
+      weeklyTotals,
       monthlyTotals: null,
       totalWeightThisWeek: null,
       averageRepsThisWeek: null,
