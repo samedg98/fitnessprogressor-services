@@ -53,4 +53,23 @@ router.get("/history", authenticateToken, async (req, res) => {
   }
 });
 
+// GET WORKOUT STATS (Protected)
+router.get("/stats", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    // Base structure — future stories will fill these in
+    return res.json({
+      weeklyTotals: null,
+      monthlyTotals: null,
+      totalWeightThisWeek: null,
+      averageRepsThisWeek: null,
+      lastFiveWorkouts: []
+    });
+  } catch (error) {
+    console.error("Stats fetch error:", error);
+    return res.status(500).json({ error: "Failed to fetch workout stats" });
+  }
+});
+
 export default router;
