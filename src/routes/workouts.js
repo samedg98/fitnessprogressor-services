@@ -88,11 +88,21 @@ router.get("/stats", authenticateToken, async (req, res) => {
     );
     const totalWeightThisWeek = parseInt(weightResult.rows[0].total);
 
+    // AVERAGE REPS THIS WEEK
+    const avgRepsResult = await pool.query(
+      `SELECT COALESCE(AVG(reps), 0) AS avg_reps
+       FROM workouts
+       WHERE user_id = $1
+       AND date >= NOW() - INTERVAL '7 days'`,
+      [userId]
+    );
+    const averageRepsThisWeek = parseFloat(avgRepsResult.rows[0].avg_reps);
+
     return res.json({
       weeklyTotals,
       monthlyTotals,
       totalWeightThisWeek,
-      averageRepsThisWeek: null,
+      averageRepsThisWeek,
       lastFiveWorkouts: []
     });
   } catch (error) {
