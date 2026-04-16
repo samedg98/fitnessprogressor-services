@@ -78,10 +78,20 @@ router.get("/stats", authenticateToken, async (req, res) => {
     );
     const monthlyTotals = parseInt(monthlyResult.rows[0].count);
 
+    // TOTAL WEIGHT LIFTED THIS WEEK
+    const weightResult = await pool.query(
+      `SELECT COALESCE(SUM(sets * reps * weight), 0) AS total
+       FROM workouts
+       WHERE user_id = $1
+       AND date >= NOW() - INTERVAL '7 days'`,
+      [userId]
+    );
+    const totalWeightThisWeek = parseInt(weightResult.rows[0].total);
+
     return res.json({
       weeklyTotals,
       monthlyTotals,
-      totalWeightThisWeek: null,
+      totalWeightThisWeek,
       averageRepsThisWeek: null,
       lastFiveWorkouts: []
     });
