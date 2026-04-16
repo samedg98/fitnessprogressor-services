@@ -98,12 +98,23 @@ router.get("/stats", authenticateToken, async (req, res) => {
     );
     const averageRepsThisWeek = parseFloat(avgRepsResult.rows[0].avg_reps);
 
+    // LAST FIVE WORKOUTS
+    const lastFiveResult = await pool.query(
+      `SELECT exercise, sets, reps, weight, date
+       FROM workouts
+       WHERE user_id = $1
+       ORDER BY date DESC
+       LIMIT 5`,
+      [userId]
+    );
+    const lastFiveWorkouts = lastFiveResult.rows;
+
     return res.json({
       weeklyTotals,
       monthlyTotals,
       totalWeightThisWeek,
       averageRepsThisWeek,
-      lastFiveWorkouts: []
+      lastFiveWorkouts
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
