@@ -109,12 +109,29 @@ router.get("/stats", authenticateToken, async (req, res) => {
     );
     const lastFiveWorkouts = lastFiveResult.rows;
 
+    // MOST COMMON EXERCISE
+    const commonExerciseResult = await pool.query(
+      `SELECT exercise, COUNT(*) AS count
+       FROM workouts
+       WHERE user_id = $1
+       GROUP BY exercise
+       ORDER BY count DESC
+       LIMIT 1`,
+      [userId]
+    );
+
+    const mostCommonExercise =
+      commonExerciseResult.rows.length > 0
+        ? commonExerciseResult.rows[0].exercise
+        : null;
+
     return res.json({
       weeklyTotals,
       monthlyTotals,
       totalWeightThisWeek,
       averageRepsThisWeek,
-      lastFiveWorkouts
+      lastFiveWorkouts,
+      mostCommonExercise
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
