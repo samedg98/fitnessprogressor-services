@@ -125,13 +125,33 @@ router.get("/stats", authenticateToken, async (req, res) => {
         ? commonExerciseResult.rows[0].exercise
         : null;
 
+    // ⭐ MONTHLY HISTORY (last 6 months)
+    const monthlyHistoryResult = await pool.query(
+      `SELECT 
+          TO_CHAR(date, 'Mon') AS month,
+          DATE_TRUNC('month', date) AS month_start,
+          COUNT(*) AS total
+       FROM workouts
+       WHERE user_id = $1
+       AND date >= DATE_TRUNC('month', NOW()) - INTERVAL '5 months'
+       GROUP BY month, month_start
+       ORDER BY month_start ASC`,
+      [userId]
+    );
+
+    const monthlyHistory = monthlyHistoryResult.rows.map(row => ({
+      month: row.month,
+      total: parseInt(row.total)
+    }));
+
     return res.json({
       weeklyTotals,
       monthlyTotals,
       totalWeightThisWeek,
       averageRepsThisWeek,
       lastFiveWorkouts,
-      mostCommonExercise
+      mostCommonExercise,
+      monthlyHistory   // ⭐ NEW FIELD
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
