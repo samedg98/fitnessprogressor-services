@@ -4,12 +4,14 @@ import { authenticateToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// BASIC TEST ROUTE
+/* -------------------------------------------------- */
+/* BASIC TEST ROUTES                                   */
+/* -------------------------------------------------- */
+
 router.get("/", (req, res) => {
   res.json({ message: "Workouts route working" });
 });
 
-// DATABASE TEST ROUTE
 router.get("/db-test", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
@@ -20,7 +22,10 @@ router.get("/db-test", async (req, res) => {
   }
 });
 
-// LOG WORKOUT (Protected)
+/* -------------------------------------------------- */
+/* LOG WORKOUT (Protected)                             */
+/* -------------------------------------------------- */
+
 router.post("/log", authenticateToken, async (req, res) => {
   const { exercise, sets, reps, weight, date } = req.body;
 
@@ -38,11 +43,43 @@ router.post("/log", authenticateToken, async (req, res) => {
   }
 });
 
-// GET WORKOUT HISTORY (Protected)
+/* -------------------------------------------------- */
+/* DELETE WORKOUT (Protected)                          */
+/* -------------------------------------------------- */
+
+router.delete("/:id", authenticateToken, async (req, res) => {
+  const workoutId = req.params.id;
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM workouts 
+       WHERE id = $1 AND user_id = $2
+       RETURNING id`,
+      [workoutId, req.userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Workout not found" });
+    }
+
+    res.json({ message: "Workout deleted successfully" });
+  } catch (err) {
+    console.error("Workout delete error:", err);
+    res.status(500).json({ error: "Failed to delete workout" });
+  }
+});
+
+/* -------------------------------------------------- */
+/* GET WORKOUT HISTORY (Protected)                     */
+/* -------------------------------------------------- */
+
 router.get("/history", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM workouts WHERE user_id = $1 ORDER BY date DESC",
+      `SELECT * 
+       FROM workouts 
+       WHERE user_id = $1 
+       ORDER BY date DESC`,
       [req.userId]
     );
 
@@ -53,12 +90,15 @@ router.get("/history", authenticateToken, async (req, res) => {
   }
 });
 
-// GET WORKOUT STATS (Protected)
+/* -------------------------------------------------- */
+/* GET WORKOUT STATS (Protected)                       */
+/* -------------------------------------------------- */
+
 router.get("/stats", authenticateToken, async (req, res) => {
   try {
     const userId = req.userId;
 
-    // WEEKLY TOTALS (last 7 days)
+    /* WEEKLY TOTALS (last 7 days) */
     const weeklyResult = await pool.query(
       `SELECT COUNT(*) 
        FROM workouts 
@@ -68,7 +108,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
     );
     const weeklyTotals = parseInt(weeklyResult.rows[0].count);
 
-    // MONTHLY TOTALS (last 30 days)
+    /* MONTHLY TOTALS (last 30 days) */
     const monthlyResult = await pool.query(
       `SELECT COUNT(*) 
        FROM workouts 
@@ -78,7 +118,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
     );
     const monthlyTotals = parseInt(monthlyResult.rows[0].count);
 
-    // TOTAL WEIGHT LIFTED THIS WEEK
+    /* TOTAL WEIGHT LIFTED THIS WEEK */
     const weightResult = await pool.query(
       `SELECT COALESCE(SUM(sets * reps * weight), 0) AS total
        FROM workouts
@@ -88,7 +128,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
     );
     const totalWeightThisWeek = parseInt(weightResult.rows[0].total);
 
-    // AVERAGE REPS THIS WEEK
+    /* AVERAGE REPS THIS WEEK */
     const avgRepsResult = await pool.query(
       `SELECT COALESCE(AVG(reps), 0) AS avg_reps
        FROM workouts
@@ -98,7 +138,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
     );
     const averageRepsThisWeek = parseFloat(avgRepsResult.rows[0].avg_reps);
 
-    // LAST FIVE WORKOUTS
+    /* LAST FIVE WORKOUTS */
     const lastFiveResult = await pool.query(
       `SELECT exercise, sets, reps, weight, date
        FROM workouts
@@ -109,7 +149,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
     );
     const lastFiveWorkouts = lastFiveResult.rows;
 
-    // MOST COMMON EXERCISE
+    /* MOST COMMON EXERCISE */
     const commonExerciseResult = await pool.query(
       `SELECT exercise, COUNT(*) AS count
        FROM workouts
@@ -125,7 +165,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
         ? commonExerciseResult.rows[0].exercise
         : null;
 
-    // ⭐ MONTHLY HISTORY (last 6 months)
+    /* MONTHLY HISTORY (last 6 months) */
     const monthlyHistoryResult = await pool.query(
       `SELECT 
           TO_CHAR(date, 'Mon') AS month,
@@ -144,6 +184,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
       total: parseInt(row.total)
     }));
 
+    /* FINAL RESPONSE */
     return res.json({
       weeklyTotals,
       monthlyTotals,
@@ -151,7 +192,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
       averageRepsThisWeek,
       lastFiveWorkouts,
       mostCommonExercise,
-      monthlyHistory   // ⭐ NEW FIELD
+      monthlyHistory
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
