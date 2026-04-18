@@ -165,6 +165,42 @@ router.get("/stats", authenticateToken, async (req, res) => {
         ? commonExerciseResult.rows[0].exercise
         : null;
 
+    /* WEEKLY BREAKDOWN (current week, Mon–Sun, America/Chicago) */
+    const weeklyBreakdownResult = await pool.query(
+      `SELECT 
+          TO_CHAR(date AT TIME ZONE 'America/Chicago', 'Dy') AS day,
+          EXTRACT(DOW FROM date AT TIME ZONE 'America/Chicago') AS dow,
+          COUNT(*) AS total
+       FROM workouts
+       WHERE user_id = $1
+         AND date >= DATE_TRUNC('week', (NOW() AT TIME ZONE 'America/Chicago'))
+       GROUP BY day, dow
+       ORDER BY dow ASC`,
+      [userId]
+    );
+
+    const rawWeekly = weeklyBreakdownResult.rows;
+
+    const orderedDays = [
+      { label: "Mon", dow: 1 },
+      { label: "Tue", dow: 2 },
+      { label: "Wed", dow: 3 },
+      { label: "Thu", dow: 4 },
+      { label: "Fri", dow: 5 },
+      { label: "Sat", dow: 6 },
+      { label: "Sun", dow: 0 },
+    ];
+
+    const weeklyBreakdown = orderedDays.map((d) => {
+      const match = rawWeekly.find(
+        (row) => parseInt(row.dow) === d.dow
+      );
+      return {
+        day: d.label,
+        total: match ? parseInt(match.total) : 0,
+      };
+    });
+
     /* MONTHLY HISTORY (last 6 months) */
     const monthlyHistoryResult = await pool.query(
       `SELECT 
@@ -179,9 +215,9 @@ router.get("/stats", authenticateToken, async (req, res) => {
       [userId]
     );
 
-    const monthlyHistory = monthlyHistoryResult.rows.map(row => ({
+    const monthlyHistory = monthlyHistoryResult.rows.map((row) => ({
       month: row.month,
-      total: parseInt(row.total)
+      total: parseInt(row.total),
     }));
 
     /* FINAL RESPONSE */
@@ -192,7 +228,8 @@ router.get("/stats", authenticateToken, async (req, res) => {
       averageRepsThisWeek,
       lastFiveWorkouts,
       mostCommonExercise,
-      monthlyHistory
+      monthlyHistory,
+      weeklyBreakdown,
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
