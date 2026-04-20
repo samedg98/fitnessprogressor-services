@@ -268,6 +268,79 @@ router.get("/stats", authenticateToken, async (req, res) => {
 
     const top3Progression = progression.slice(0, 3);
 
+    /* -------------------------------------------------- */
+    /* CONSISTENCY SCORE (last 6 weeks)                   */
+    /* -------------------------------------------------- */
+
+    const weeklyCountsResult = await pool.query(
+      `SELECT 
+          DATE_TRUNC('week', date)::date AS week_start,
+          COUNT(*) AS total
+       FROM workouts
+       WHERE user_id = $1
+         AND date >= DATE_TRUNC('week', NOW()) - INTERVAL '5 weeks'
+       GROUP BY week_start
+       ORDER BY week_start ASC`,
+      [userId]
+    );
+
+    const weekCountsMap = new Map();
+    weeklyCountsResult.rows.forEach((row) => {
+      const key = new Date(row.week_start).toISOString().slice(0, 10);
+      weekCountsMap.set(key, parseInt(row.total));
+    });
+
+    const weeks = [];
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setHours(0, 0, 0, 0);
+    const day = currentWeekStart.getDay(); // 0=Sun, 1=Mon, ...
+    const diffToMonday = (day + 6) % 7;
+    currentWeekStart.setDate(currentWeekStart.getDate() - diffToMonday);
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(currentWeekStart);
+      d.setDate(d.getDate() - i * 7);
+      const key = d.toISOString().slice(0, 10);
+      const count = weekCountsMap.get(key) || 0;
+      weeks.push(count);
+    }
+
+    const totalWorkoutsLast6Weeks = weeks.reduce((sum, c) => sum + c, 0);
+
+    let consistencyScore = null;
+
+    if (totalWorkoutsLast6Weeks > 0) {
+      const scores = weeks.map((count) => {
+        if (count >= 5) return 100;
+        if (count >= 3) return 80;
+        if (count >= 1) return 50;
+        return 0;
+      });
+
+      const avgScore =
+        scores.reduce((sum, s) => sum + s, 0) / scores.length;
+
+      const roundedScore = Math.round(avgScore);
+
+      let label = "Needs improvement";
+      let color = "red";
+
+      if (roundedScore >= 80) {
+        label = "Excellent consistency";
+        color = "green";
+      } else if (roundedScore >= 50) {
+        label = "Good consistency";
+        color = "yellow";
+      }
+
+      consistencyScore = {
+        score: roundedScore,
+        label,
+        color,
+      };
+    }
+
     /* FINAL RESPONSE */
     return res.json({
       weeklyTotals,
@@ -279,6 +352,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
       monthlyHistory,
       weeklyBreakdown,
       strengthProgression: top3Progression,
+      consistencyScore,
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
