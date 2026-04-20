@@ -220,6 +220,54 @@ router.get("/stats", authenticateToken, async (req, res) => {
       total: parseInt(row.total),
     }));
 
+    /* -------------------------------------------------- */
+    /* STRENGTH PROGRESSION (Top 3 exercises)             */
+    /* -------------------------------------------------- */
+
+    const recentMaxResult = await pool.query(
+      `SELECT exercise, MAX(weight) AS max_weight
+       FROM workouts
+       WHERE user_id = $1
+         AND weight IS NOT NULL
+         AND date >= NOW() - INTERVAL '30 days'
+       GROUP BY exercise`,
+      [userId]
+    );
+
+    const previousMaxResult = await pool.query(
+      `SELECT exercise, MAX(weight) AS max_weight
+       FROM workouts
+       WHERE user_id = $1
+         AND weight IS NOT NULL
+         AND date >= NOW() - INTERVAL '60 days'
+         AND date < NOW() - INTERVAL '30 days'
+       GROUP BY exercise`,
+      [userId]
+    );
+
+    const recentMap = new Map();
+    recentMaxResult.rows.forEach((row) =>
+      recentMap.set(row.exercise, parseInt(row.max_weight))
+    );
+
+    const previousMap = new Map();
+    previousMaxResult.rows.forEach((row) =>
+      previousMap.set(row.exercise, parseInt(row.max_weight))
+    );
+
+    const progression = [];
+
+    for (const [exercise, recentMax] of recentMap.entries()) {
+      const previousMax = previousMap.get(exercise) || 0;
+      const change = recentMax - previousMax;
+
+      progression.push({ exercise, change });
+    }
+
+    progression.sort((a, b) => b.change - a.change);
+
+    const top3Progression = progression.slice(0, 3);
+
     /* FINAL RESPONSE */
     return res.json({
       weeklyTotals,
@@ -230,6 +278,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
       mostCommonExercise,
       monthlyHistory,
       weeklyBreakdown,
+      strengthProgression: top3Progression,
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
