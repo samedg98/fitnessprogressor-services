@@ -341,6 +341,46 @@ router.get("/stats", authenticateToken, async (req, res) => {
       };
     }
 
+    /* -------------------------------------------------- */
+    /* EXERCISE VARIETY (last 30 days)                    */
+    /* -------------------------------------------------- */
+
+    const varietyResult = await pool.query(
+      `SELECT COUNT(DISTINCT exercise) AS unique_exercises
+       FROM workouts
+       WHERE user_id = $1
+         AND date >= NOW() - INTERVAL '30 days'`,
+      [userId]
+    );
+
+    const uniqueExercises = parseInt(
+      varietyResult.rows[0].unique_exercises || 0
+    );
+
+    let exerciseVariety = null;
+
+    if (uniqueExercises > 0) {
+      let score = 40;
+      let label = "Low variety";
+
+      if (uniqueExercises >= 8) {
+        score = 100;
+        label = "Excellent variety";
+      } else if (uniqueExercises >= 5) {
+        score = 80;
+        label = "Good variety";
+      } else if (uniqueExercises >= 3) {
+        score = 60;
+        label = "Moderate variety";
+      }
+
+      exerciseVariety = {
+        score,
+        uniqueExercises,
+        label,
+      };
+    }
+
     /* FINAL RESPONSE */
     return res.json({
       weeklyTotals,
@@ -353,6 +393,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
       weeklyBreakdown,
       strengthProgression: top3Progression,
       consistencyScore,
+      exerciseVariety,
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
