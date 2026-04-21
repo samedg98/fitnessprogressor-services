@@ -381,6 +381,96 @@ router.get("/stats", authenticateToken, async (req, res) => {
       };
     }
 
+    /* -------------------------------------------------- */
+    /* WEEKLY STREAK (consecutive active weeks)           */
+    /* -------------------------------------------------- */
+
+    const streakWeeksResult = await pool.query(
+      `SELECT 
+          DATE_TRUNC('week', date)::date AS week_start,
+          COUNT(*) AS total
+       FROM workouts
+       WHERE user_id = $1
+       GROUP BY week_start
+       ORDER BY week_start ASC`,
+      [userId]
+    );
+
+    const streakWeekMap = new Map();
+    streakWeeksResult.rows.forEach((row) => {
+      const key = new Date(row.week_start).toISOString().slice(0, 10);
+      streakWeekMap.set(key, parseInt(row.total));
+    });
+
+    let weeklyStreak = 0;
+
+    if (streakWeeksResult.rows.length > 0) {
+      const nowStreak = new Date();
+      const currentWeekStartStreak = new Date(nowStreak);
+      currentWeekStartStreak.setHours(0, 0, 0, 0);
+      const dayStreak = currentWeekStartStreak.getDay(); // 0=Sun, 1=Mon...
+      const diffToMondayStreak = (dayStreak + 6) % 7;
+      currentWeekStartStreak.setDate(
+        currentWeekStartStreak.getDate() - diffToMondayStreak
+      );
+
+      let cursor = new Date(currentWeekStartStreak);
+
+      while (true) {
+        const key = cursor.toISOString().slice(0, 10);
+        const count = streakWeekMap.get(key) || 0;
+
+        if (count > 0) {
+          weeklyStreak += 1;
+          cursor.setDate(cursor.getDate() - 7);
+        } else {
+          break;
+        }
+      }
+    }
+
+    /* -------------------------------------------------- */
+    /* WEEKLY VOLUME TREND (last 8 weeks)                 */
+    /* -------------------------------------------------- */
+
+    const volumeResult = await pool.query(
+      `SELECT 
+          DATE_TRUNC('week', date)::date AS week_start,
+          COALESCE(SUM(sets * reps * weight), 0) AS total
+       FROM workouts
+       WHERE user_id = $1
+         AND date >= DATE_TRUNC('week', NOW()) - INTERVAL '7 weeks'
+       GROUP BY week_start
+       ORDER BY week_start ASC`,
+      [userId]
+    );
+
+    const volumeMap = new Map();
+    volumeResult.rows.forEach((row) => {
+      const key = new Date(row.week_start).toISOString().slice(0, 10);
+      volumeMap.set(key, parseInt(row.total));
+    });
+
+    const volumeWeeks = [];
+    const currentWeekStartForVolume = new Date(now);
+    currentWeekStartForVolume.setHours(0, 0, 0, 0);
+    const dayVol = currentWeekStartForVolume.getDay();
+    const diffToMondayVol = (dayVol + 6) % 7;
+    currentWeekStartForVolume.setDate(
+      currentWeekStartForVolume.getDate() - diffToMondayVol
+    );
+
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date(currentWeekStartForVolume);
+      d.setDate(d.getDate() - i * 7);
+      const key = d.toISOString().slice(0, 10);
+      const total = volumeMap.get(key) || 0;
+      volumeWeeks.push({
+        weekStart: key,
+        total,
+      });
+    }
+
     /* FINAL RESPONSE */
     return res.json({
       weeklyTotals,
@@ -394,6 +484,8 @@ router.get("/stats", authenticateToken, async (req, res) => {
       strengthProgression: top3Progression,
       consistencyScore,
       exerciseVariety,
+      weeklyVolumeTrend: volumeWeeks,
+      weeklyStreak,
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
