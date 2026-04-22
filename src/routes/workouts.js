@@ -471,6 +471,115 @@ router.get("/stats", authenticateToken, async (req, res) => {
       });
     }
 
+    /* -------------------------------------------------- */
+    /* RECOMMENDATIONS (Hybrid: patterns + suggestions)   */
+    /* -------------------------------------------------- */
+
+    const recommendations = [];
+
+    // Pattern: weekly vs monthly average
+    if (monthlyTotals > 0) {
+      const monthlyAvg = monthlyTotals / 4;
+      if (weeklyTotals > monthlyAvg) {
+        recommendations.push(
+          "You worked out more this week than your recent weekly average — great job, keep the momentum going."
+        );
+      } else if (weeklyTotals < monthlyAvg) {
+        recommendations.push(
+          "Your weekly workout count is below your recent average — consider scheduling an extra session this week."
+        );
+      } else {
+        recommendations.push(
+          "Your weekly workout count matches your recent average — solid consistency."
+        );
+      }
+    }
+
+    // Pattern: consistency score
+    if (consistencyScore) {
+      if (consistencyScore.score >= 80) {
+        recommendations.push(
+          "Your consistency score is excellent — you’re building a strong long-term habit."
+        );
+      } else if (consistencyScore.score >= 50) {
+        recommendations.push(
+          "Your consistency is good — a bit more regularity could push you into the excellent range."
+        );
+      } else {
+        recommendations.push(
+          "Your consistency score is low — try setting specific workout days to build a routine."
+        );
+      }
+    }
+
+    // Pattern: exercise variety
+    if (exerciseVariety) {
+      if (exerciseVariety.score >= 80) {
+        recommendations.push(
+          "Your exercise variety is high — you’re training a broad range of movements."
+        );
+      } else if (exerciseVariety.score >= 60) {
+        recommendations.push(
+          "Your exercise variety is moderate — consider sprinkling in a few new movements."
+        );
+      } else {
+        recommendations.push(
+          "Your exercise variety is low — adding new exercises can help reduce plateaus and keep training engaging."
+        );
+      }
+    }
+
+    // Suggestion: check for missing major movement patterns (push/pull/legs)
+    const recentExercises = lastFiveWorkouts.map((w) =>
+      (w.exercise || "").toLowerCase()
+    );
+
+    const hasLeg =
+      recentExercises.some((e) =>
+        ["squat", "deadlift", "lunge", "leg press"].some((k) =>
+          e.includes(k)
+        )
+      );
+
+    const hasPush =
+      recentExercises.some((e) =>
+        ["bench", "press", "push-up", "push up"].some((k) =>
+          e.includes(k)
+        )
+      );
+
+    const hasPull =
+      recentExercises.some((e) =>
+        ["row", "pull", "lat pulldown", "pulldown"].some((k) =>
+          e.includes(k)
+        )
+      );
+
+    if (!hasLeg) {
+      recommendations.push(
+        "You haven’t logged many lower-body movements recently — consider adding squats, deadlifts, or lunges."
+      );
+    }
+
+    if (!hasPull) {
+      recommendations.push(
+        "Pulling movements seem underrepresented — adding rows or pull-ups can help balance your training."
+      );
+    }
+
+    if (!hasPush) {
+      recommendations.push(
+        "Pushing movements are limited — consider including bench press, overhead press, or push-ups."
+      );
+    }
+
+    // Fallback if somehow nothing was added
+    if (recommendations.length === 0) {
+      recommendations.push(
+        "Keep logging your workouts — more data will unlock personalized recommendations."
+      );
+    }
+
     /* FINAL RESPONSE */
     return res.json({
       weeklyTotals,
@@ -486,6 +595,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
       exerciseVariety,
       weeklyVolumeTrend: volumeWeeks,
       weeklyStreak,
+      recommendations,
     });
   } catch (error) {
     console.error("Stats fetch error:", error);
