@@ -5,8 +5,21 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// CORS — allow your frontend domain in production
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+
+// Health check route
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
 // Routes
 import authRoutes from "./routes/auth.js";
