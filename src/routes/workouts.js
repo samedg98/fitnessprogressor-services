@@ -472,6 +472,42 @@ router.get("/stats", authenticateToken, async (req, res) => {
     }
 
     /* -------------------------------------------------- */
+    /* PERSONAL RECORDS (PRs) — max weight, reps, volume  */
+    /* -------------------------------------------------- */
+
+    const prResult = await pool.query(
+      `SELECT exercise, sets, reps, weight
+       FROM workouts
+       WHERE user_id = $1`,
+      [userId]
+    );
+
+    const prMap = new Map();
+
+    prResult.rows.forEach((row) => {
+      const exercise = row.exercise;
+      const weight = row.weight || 0;
+      const reps = row.reps || 0;
+      const sets = row.sets || 0;
+      const volume = weight * reps * sets;
+
+      if (!prMap.has(exercise)) {
+        prMap.set(exercise, {
+          maxWeight: weight,
+          maxReps: reps,
+          maxVolume: volume,
+        });
+      } else {
+        const current = prMap.get(exercise);
+        if (weight > current.maxWeight) current.maxWeight = weight;
+        if (reps > current.maxReps) current.maxReps = reps;
+        if (volume > current.maxVolume) current.maxVolume = volume;
+      }
+    });
+
+    const personalRecords = Object.fromEntries(prMap);
+
+    /* -------------------------------------------------- */
     /* RECOMMENDATIONS (Hybrid: patterns + suggestions)   */
     /* -------------------------------------------------- */
 
@@ -596,6 +632,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
       weeklyVolumeTrend: volumeWeeks,
       weeklyStreak,
       recommendations,
+      personalRecords,
     });
   } catch (error) {
     console.error("Stats fetch error:", error);

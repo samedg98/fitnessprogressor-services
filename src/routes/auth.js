@@ -1,6 +1,5 @@
 import express from "express";
 import pool from "../db.js";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 const router = express.Router();
@@ -20,13 +19,10 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert user
+    // Insert user with plain-text password
     await pool.query(
-      "INSERT INTO users (email, password_hash) VALUES ($1, $2)",
-      [email, hashedPassword]
+      "INSERT INTO users (email, password) VALUES ($1, $2)",
+      [email, password]
     );
 
     res.json({ message: "User registered successfully" });
@@ -53,17 +49,15 @@ router.post("/login", async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-
-    if (!isMatch) {
+    // Compare plain-text passwords
+    if (password !== user.password) {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
     // Create JWT token
     const token = jwt.sign(
       { userId: user.id },
-      "supersecretkey", // later move to .env
+      "supersecretkey", // move to .env later
       { expiresIn: "1h" }
     );
 
