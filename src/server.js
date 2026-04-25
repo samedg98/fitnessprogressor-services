@@ -1,3 +1,6 @@
+import pg from "pg"; 
+pg.types.setTypeParser(1082, (val) => val); // <-- FIX: return DATE as string
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
