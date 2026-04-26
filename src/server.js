@@ -1,5 +1,5 @@
-import pg from "pg"; 
-pg.types.setTypeParser(1082, (val) => val); // <-- FIX: return DATE as string
+import pg from "pg";
+pg.types.setTypeParser(1082, (val) => val); // return DATE as string
 
 import express from "express";
 import cors from "cors";
@@ -9,10 +9,15 @@ dotenv.config();
 
 const app = express();
 
-// CORS — allow your frontend domain in production
+// CORS — allow localhost + Netlify production domain
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://delicate-liger-d20157.netlify.app"
+    ],
+    methods: "GET,POST,PUT,DELETE",
+    allowedHeaders: "Content-Type,Authorization",
     credentials: true,
   })
 );
