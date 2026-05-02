@@ -1,9 +1,8 @@
 import jwt from "jsonwebtoken";
 
 export function authenticateToken(req, res, next) {
+  
   const authHeader = req.headers["authorization"];
-
-  // Expecting: "Bearer <token>"
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
@@ -15,7 +14,7 @@ export function authenticateToken(req, res, next) {
       return res.status(403).json({ error: "Invalid token" });
     }
 
-    req.userId = user.userId; // attach user ID to request
+    req.userId = user.userId;
     next();
   });
 }
