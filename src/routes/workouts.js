@@ -70,6 +70,38 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 });
 
 /* -------------------------------------------------- */
+/* UPDATE WORKOUT (Protected)                          */
+/* -------------------------------------------------- */
+
+router.put("/:id", authenticateToken, async (req, res) => {
+  const workoutId = req.params.id;
+  const { exercise, sets, reps, weight, date } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE workouts
+       SET exercise = $1,
+           sets = $2,
+           reps = $3,
+           weight = $4,
+           date = $5
+       WHERE id = $6 AND user_id = $7
+       RETURNING *`,
+      [exercise, sets, reps, weight, date, workoutId, req.userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Workout not found" });
+    }
+
+    res.json({ message: "Workout updated successfully", workout: result.rows[0] });
+  } catch (err) {
+    console.error("Workout update error:", err);
+    res.status(500).json({ error: "Failed to update workout" });
+  }
+});
+
+/* -------------------------------------------------- */
 /* GET WORKOUT HISTORY (Protected)                     */
 /* -------------------------------------------------- */
 
