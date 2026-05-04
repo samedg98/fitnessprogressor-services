@@ -9,17 +9,22 @@ dotenv.config();
 
 const app = express();
 
-// CORS — allow localhost + Netlify + Vercel production domain
+// CORS — allow localhost + Netlify + all Vercel preview domains
 const allowedOrigins = [
   "http://localhost:5173",
   "https://delicate-liger-d20157.netlify.app",
-  "https://fitnessprogressor-zu77xfltn-samedg98s-projects.vercel.app/"
+  "https://fitnessprogressor-kgcwdudfe-samedg98s-projects.vercel.app",
+  "https://fitnessprogressor-zu77xfltn-samedg98s-projects.vercel.app"
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app")
+      ) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -31,8 +36,10 @@ app.use(
   })
 );
 
-// Handle preflight requests
-app.options("*", cors());
+// SAFE preflight handlers (Node 18+ compatible)
+app.options("/", cors());
+app.options("/auth/*", cors());
+app.options("/workouts/*", cors());
 
 app.use(express.json());
 
