@@ -36,11 +36,6 @@ app.use(
   })
 );
 
-// SAFE preflight handlers (Node 18+ compatible)
-app.options("/", cors());
-app.options("/auth/*", cors());
-app.options("/workouts/*", cors());
-
 app.use(express.json());
 
 // Health check route
