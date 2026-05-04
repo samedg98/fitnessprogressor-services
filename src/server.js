@@ -15,7 +15,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://delicate-liger-d20157.netlify.app",
-      "https://fitnessprogressor-ui.vercel.app"   
+      "https://fitnessprogressor-kgcwdudfe-samedg98s-projects.vercel.app"
     ],
     methods: "GET,POST,PUT,DELETE",
     allowedHeaders: "Content-Type,Authorization",
