@@ -9,12 +9,13 @@ dotenv.config();
 
 const app = express();
 
-// CORS — allow localhost + Netlify production domain
+// CORS — allow localhost + Netlify + Vercel production domain
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://delicate-liger-d20157.netlify.app"
+      "https://delicate-liger-d20157.netlify.app",
+      "https://fitnessprogressor-ui.vercel.app"   
     ],
     methods: "GET,POST,PUT,DELETE",
     allowedHeaders: "Content-Type,Authorization",
