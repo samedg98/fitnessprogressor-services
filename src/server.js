@@ -13,7 +13,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://delicate-liger-d20157.netlify.app",
-  "https://fitnessprogressor-kgcwdudfe-samedg98s-projects.vercel.app"
+  "https://fitnessprogressor-zu77xfltn-samedg98s-projects.vercel.app/"
 ];
 
 app.use(
