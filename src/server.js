@@ -9,10 +9,17 @@ dotenv.config();
 
 const app = express();
 
-// CORS — allow localhost + Netlify + all Vercel preview domains
+// CORS — allow localhost + old Netlify + new Netlify + Vercel previews
 const allowedOrigins = [
   "http://localhost:5173",
+
+  // OLD Netlify
   "https://delicate-liger-d20157.netlify.app",
+
+  // NEW Netlify 
+  "https://stately-tartufo-23cf98.netlify.app",
+
+  // Vercel preview
   "https://fitnessprogressor-kgcwdudfe-samedg98s-projects.vercel.app",
   "https://fitnessprogressor-zu77xfltn-samedg98s-projects.vercel.app"
 ];
@@ -27,6 +34,7 @@ app.use(
       ) {
         callback(null, true);
       } else {
+        console.log("❌ Blocked by CORS:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
