@@ -17,7 +17,7 @@ const allowedOrigins = [
   "https://delicate-liger-d20157.netlify.app",
 
   // NEW Netlify 
-  "https://stately-tartufo-23cf98.netlify.app",
+  "https://fitnessprogressor.netlify.app",
 
   // Vercel preview
   "https://fitnessprogressor-kgcwdudfe-samedg98s-projects.vercel.app",
